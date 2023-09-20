@@ -1,0 +1,31 @@
+import geopandas as gpd
+import rasterio
+from rasterio import mask
+
+raster_path = 'F:\Data\Clip\Landsat8\LC09_L2SP_032032_20230907_20230913_02_T1\LC09_L2SP_032032_20230907_20230913_02_T1_SR_B1.TIF'
+
+shapefile_path = 'F:\Data\From Dr.Sushant\Poly3\S_3.shp'
+
+output_path = 'F:\Data\Clip\B1_Band.tif'
+
+shapefile = gpd.read_file(shapefile_path)
+# Reproject the shapefile to match the raster CRS
+shapefile = shapefile.to_crs(raster_crs)
+
+# Open the raster file using rasterio
+with rasterio.open(raster_path) as src:
+    # Clip the raster using the shapefile geometry
+    clipped_raster, transform = mask.mask(src, shapefile.geometry, crop=True)
+    # Update metadata with the new dimensions and transform
+    profile = src.profile
+    profile.update({
+        'height': clipped_raster.shape[1],
+        'width': clipped_raster.shape[2],
+        'transform': transform
+    })
+
+# Save the clipped raster to a new file
+with rasterio.open(output_path, 'w', **profile) as dst:
+        dst.write(clipped_raster)
+
+print(f"Clipped raster saved to: {output_path}")
