@@ -29,3 +29,71 @@ with rasterio.open(output_path, 'w', **profile) as dst:
         dst.write(clipped_raster)
 
 print(f"Clipped raster saved to: {output_path}")
+
+###################################for lopping#####################
+import os
+import geopandas as gpd
+import rasterio
+from rasterio import mask
+
+input_dir = r'F:\confData\NDVI_Output'
+shapefile_path = r'F:\Study_Area\shape_file\outer_extent.shp'
+shp = gpd.read_file(shapefile_path)
+output_dir = r'F:\confData\output'
+
+for file in os.listdir(input_dir):
+    raster_path = os.path.join(input_dir, file)
+    with rasterio.open(raster_path) as src:
+         clipped_raster, transform = mask.mask(src, shp.geometry, crop=True)
+         profile = src.profile
+         profile.update({
+            'height': clipped_raster.shape[1],
+            'width': clipped_raster.shape[2],
+            'transform': transform
+        })
+         output_clip_dir = os.path.join(output_dir, f'clip_{file}')
+    
+         with rasterio.open(output_clip_dir, 'w', **profile) as dst:
+             dst.write(clipped_raster)
+
+print('All the rasters are clipped')
+
+#######################with function########################
+import os
+import geopandas as gpd
+import rasterio
+from rasterio import mask
+
+def clip_func(raster_path, shapefile_path):
+    with rasterio.open(raster_path) as src:
+        raster_crs = src.crs
+        shp = gpd.read_file(shapefile_path)
+        
+        # Assuming that the CRS of the shapefile is not set, you can set it using the CRS of the raster
+        #shp.crs = raster_crs
+        
+        #shp_project = shp.to_crs(src.crs)  # Project the shapefile to the CRS of the raster
+        clipped_raster, transform = mask.mask(src, shp.geometry, crop=True)
+        
+        profile = src.profile
+        profile.update({
+            'height': clipped_raster.shape[1],
+            'width': clipped_raster.shape[2],
+            'transform': transform
+        })
+
+    return clipped_raster, profile
+
+input_dir = r'F:\confData\NDVI_Output'
+shapefile_path = r'F:\Study_Area\shape_file\outer_extent.shp'
+output_dir = r'F:\confData\output'
+
+for file in os.listdir(input_dir):
+    raster_path = os.path.join(input_dir, file)
+    clipped_raster, profile = clip_func(raster_path, shapefile_path)
+    output_clip_dir = os.path.join(output_dir, f'clip_{file}')
+    
+    with rasterio.open(output_clip_dir, 'w', **profile) as dst:
+        dst.write(clipped_raster)
+
+print('All the rasters are clipped')
